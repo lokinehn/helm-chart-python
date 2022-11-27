@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "project.fullname" . }}-redis
+  labels:
+    {{- include "project.labels" . | nindent 4 }}-redis
+spec:
+  selector:
+    matchLabels:
+      {{- include "project.selectorLabels" . | nindent 6 }}-redis
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "project.selectorLabels" . | nindent 8 }}-redis
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ include "project.fullname" . }}-redis
+          image: "{{ .Values.image.redis }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: redis
+              containerPort: {{ .Values.service.redis_port }}
+              protocol: TCP
+          resources: 
+            limits:
+              cpu: 100m
+              memory: 128Mi
+            requests:
+              cpu: 10m
+              memory: 32Mi

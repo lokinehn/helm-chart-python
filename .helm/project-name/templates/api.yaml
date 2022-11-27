@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "project.fullname" . }}
+  labels:
+    {{- include "project.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "project.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "project.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - name: {{ include "project.fullname" . }}-tests
+          image: "{{ .Values.image.app }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.envFrom.name }}
+          command:
+            - python
+            - manage.py
+            - test
+        {{- with .Values.resources_web }}
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        - name: {{ include "project.fullname" . }}-migrations
+          image: "{{ .Values.image.app }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.envFrom.name }}
+          command:
+            - python
+            - manage.py
+            - migrate
+        {{- with .Values.resources_web }}
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      containers:
+        - name: {{ include "project.fullname" . }}
+          image: "{{ .Values.image.app }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.envFrom.name }}
+          command:
+            - gunicorn         # or any other command to start web server
+            - --timeout
+            - "1800"
+            - -b
+            - 127.0.0.1:9010
+            - -w
+            - "4"
+            - project.wsgi:application
+        {{- with .Values.resources_web }}
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.probes_web }}
+          {{- toYaml . | nindent 10 }}
+        {{- end }}

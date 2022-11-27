@@ -1,0 +1,78 @@
+replicaCount: 1
+
+image:
+  app: registry.url/path/to/image
+  redis: redis:alpine
+  pullPolicy: Always
+
+imagePullSecrets:
+  - name: registry
+nameOverride: "scoring"
+fullnameOverride: "scoring"
+
+envFrom:
+  name: env
+
+service:
+  type: ClusterIP
+  port: 9010
+  redis_port: 6379
+
+ingress:
+  enabled: true
+  className: ""
+  hosts:
+    - host: simple-project.k8s
+      paths:
+        - path: /
+
+resources_web:
+  resources: 
+    limits:
+      cpu: 200m
+      memory: 384Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+resources_celery:
+  resources: 
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+probes_web:
+  readinessProbe:
+    httpGet:
+      path: /
+      port: 9010
+    initialDelaySeconds: 15
+    failureThreshold: 5
+    successThreshold: 1
+    timeoutSeconds: 15
+    periodSeconds: 30
+  livenessProbe:
+    httpGet:
+      path: /
+      port: 9010
+    failureThreshold: 3
+    successThreshold: 1
+    timeoutSeconds: 15
+    periodSeconds: 10
+
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
